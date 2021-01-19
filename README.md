@@ -1,2 +1,3 @@
 # server-generator
-use CLI to generate backend server template folder and files
+
+this project uses CLI to generate backend server template folder and files for productivity
