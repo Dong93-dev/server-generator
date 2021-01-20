@@ -96,12 +96,13 @@ app.listen(8000, ()=>{
 exports.createExpressRouter = (projectName) => {
   const apiRouterText = `
 const apiRouter = require('express').Router();
+const { exampleControllerFunc } =require("../controllers/example.controller")
 \/\/const router_name = require('router_path')
     
 \/\/apiRouter.use('/endpoint', router_name);
 apiRouter.route('/')
-         .get(controller_function_name)
-         .post(controller_function_name);
+         .get(exampleControllerFunc);
+         
 module.exports = apiRouter;`;
 
   return writeFilePromise(
@@ -122,13 +123,43 @@ exports.databaseSetUp = (projectName) => {
     .then(() => {
       setTimeout(() => {}, 1000);
       return Promise.all([
-        writeFilePromise(`${projectName}/db/test_data/index.js`, ""),
-        writeFilePromise(`${projectName}/db/development_data/index.js`, ""),
-        writeFilePromise(`${projectName}/db/index.js`, ""),
+        writeFilePromise(
+          `${projectName}/db/test_data/example_test.js`,
+          `module.exports = [{id: 1}]`
+        ),
+        writeFilePromise(
+          `${projectName}/db/development_data/example_dev.js`,
+          `module.exports = [{id: 1}]`
+        ),
       ]);
     })
     .then(() => {
       setTimeout(() => {}, 1000);
+      return Promise.all([
+        writeFilePromise(
+          `${projectName}/db/test_data/index.js`,
+          `exports.test_data = require("./example_test")`
+        ),
+        writeFilePromise(
+          `${projectName}/db/development_data/index.js`,
+          `exports.dev_data = require("./example_dev")`
+        ),
+        writeFilePromise(
+          `${projectName}/db/index.js`,
+          `const ENV = process.env.NODE_ENV || "development";
+const testData = require("./test_data");
+const devData = require("./development_data");
+const data = {
+  test: testData,
+  development: devData,
+};
+
+module.exports = data[ENV];
+`
+        ),
+      ]);
+    })
+    .then(() => {
       return mkdirPromise(`${projectName}/db/seeds`);
     });
 };
@@ -139,23 +170,23 @@ const ENV = process.env.NODE_ENV || "development";
 // please make sure the following info is correct
 
 const baseConfig = {
-    host: "",
-    user:"",
-    password: "",
+    port: "5432",
+    // user:"",
+    // password: "",
 };
 
 const customConfig = {
-    development: {database: ""},
-    test: {database: ""}
+    development: {database: "example_db"},
+    test: {database: "example_db_test"}
 }
 
 module.exports = {...baseConfig, ...customConfig[ENV]};
     `;
   const connectionFile = `
-const {client} = require("pg");
+const {Client} = require("pg");
 const dbConfig = require("./dbConfig");
 
-const  client = new client(dbConfig);
+const  client = new Client(dbConfig);
 
 client.connect().then(() => {
     console.log('connected');
@@ -168,11 +199,38 @@ module.exports = client;
       return Promise.all([
         writeFilePromise(
           `${projectName}/db/seeds/seed.sql`,
-          "/*create database and tables with data populated*/"
+          `/*create database and tables with data populated*/
+DROP DATABASE IF EXISTS example_db;
+CREATE DATABASE example_db;
+
+\\c example_db;
+
+CREATE TABLE example_table (
+  id INT PRIMARY KEY
+);
+
+INSERT INTO example_table
+(id)
+VALUES
+(1);
+`
         ),
         writeFilePromise(
           `${projectName}/db/seeds/seed-test.sql`,
-          "/*create database_test and tables with data populated*/"
+          `/*create database_test and tables with data populated*/
+DROP DATABASE IF EXISTS example_db_test;
+CREATE DATABASE example_db_test;
+
+\\c example_db_test;
+
+CREATE TABLE example_table (
+  id INT PRIMARY KEY
+);
+
+INSERT INTO example_table
+(id)
+VALUES
+(1);`
         ),
       ]);
     })
@@ -203,8 +261,15 @@ exports.knexSetup = (projectName) => {
       writeFilePromise(
         `${projectName}/db/seeds/seed.js`,
         `
+const dbData = require("../index")
+
 exports.seed = (knex) => {
-    // return knex('table_name')
+  /*
+   return knex.migrate
+   .rollback()
+   .then(() => knex.migrate.latest())
+   .then(() => knex("example_table").insert(dbData[data]))
+ */
 }`
       )
     )

@@ -40,7 +40,7 @@ function generate(projectName) {
       }
     })
     .then(([answers]) => {
-      setTimeout(() => {}, 1000);
+      setTimeout(() => {}, 2000);
       if (answers.serverType === "express") {
         return createExpressRouter(projectName);
       }
